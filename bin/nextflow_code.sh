@@ -21,6 +21,13 @@ pathToBin="nextflow-bin"
 sorted_bam_prefix="${sorted_bam_path%%.*}"
 output_dir="./out/eggd_picard_stats/QC"
 
+# download files
+fasta_file_name=$(dx describe ${fasta_index_path} --name)
+bedfile_name=$(dx describe ${bedfile_path} --name)
+
+dx download "$fasta_index_path" -o "$fasta_file_name"
+dx download "$bedfile_path" -o "$bedfile_name"
+
 echo $sorted_bam_bai
 
 echo "inputs collected"
@@ -115,13 +122,11 @@ export PICARD_JAR=${pathToBin}/picard.jar
 export GTF_TO_REFFLAT=${pathToBin}/GtftoRefflat-assembly-0.1.jar
 
 # Unpack the reference genome for Picard. Produces genome.fa, genome.fa.fai, and genome.dict files.
-tar zxvf $fasta_index_path
+tar zxvf $fasta_file_name
 
 # Create directory for Picard stats files to be uploaded from the worker
 
 mkdir -p $output_dir
-
-
 
 ##### MAIN #####
 
