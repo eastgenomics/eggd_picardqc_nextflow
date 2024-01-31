@@ -6,20 +6,21 @@ set -e -x -o pipefail
 
 # call in inputs from the command run in nextflow process
 
-fasta_index_path=""
-bedfile_path=""
-sorted_bam_path=""
-sorted_bam_prefix=""
-run_CollectMultipleMetrics=""
-run_CollectHsMetrics=""
-run_CollectTargetedPcrMetrics=""
-run_CollectRnaSeqMetrics=""
-ref_annot_refflat=""
-ref_annot_refflat_path=""
+fasta_index_path="$1"
+bedfile_path="$2"
+sorted_bam_path="$3"
+run_CollectMultipleMetrics="$4"
+run_CollectHsMetrics="$5"
+run_CollectTargetedPcrMetrics="$6"
+run_CollectRnaSeqMetrics="$7"
+ref_annot_refflat="$8"
+
+
+
 
 # run code for picard_qc, taken from code.sh
 
-
+sorted_bam_prefix="${sorted_bam_path##*/}"
 create_interval_file() {
 	echo "create_interval_file"
 	# Converts a BED file to a Picard Interval List
@@ -55,7 +56,7 @@ collect_multiple_metrics() {
 	# All outputs are saved to $output_dir (defined in main()) for upload to DNAnexus.
 	# Note that not all outputs are relevent for all types of sequencing
 	# e.g. some aren't applicable for amplicon NGC
-	# Note that CollectSequencingArtifactMetrics errors out with TSO500 BAMs due to 
+	# Note that CollectSequencingArtifactMetrics errors out with TSO500 BAMs due to
 	# "Record contains library that is missing from header" and so not used (fix unclear)
 	$java -jar /picard.jar CollectMultipleMetrics I="$sorted_bam_path" R=genome.fa \
 	PROGRAM=null \
