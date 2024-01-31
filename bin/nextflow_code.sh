@@ -5,22 +5,27 @@
 set -e -x -o pipefail
 
 # call in inputs from the command run in nextflow process
+echo "Reading inputs"
 
 fasta_index_path="$1"
 bedfile_path="$2"
 sorted_bam_path="$3"
-run_CollectMultipleMetrics="$4"
-run_CollectHsMetrics="$5"
-run_CollectTargetedPcrMetrics="$6"
-run_CollectRnaSeqMetrics="$7"
-ref_annot_refflat="$8"
+sorted_bam_bai="$4"
+run_CollectMultipleMetrics="$5"
+run_CollectHsMetrics="$6"
+run_CollectTargetedPcrMetrics="$7"
+run_CollectRnaSeqMetrics="$8"
+ref_annot_refflat_path="$9"
 
+pathToBin="nextflow-bin"
+sorted_bam_prefix="${sorted_bam_path%%.*}"
+output_dir="./out/eggd_picard_stats/QC"
 
+echo $sorted_bam_bai
 
-
+echo "inputs collected"
 # run code for picard_qc, taken from code.sh
 
-sorted_bam_prefix="${sorted_bam_path##*/}"
 create_interval_file() {
 	echo "create_interval_file"
 	# Converts a BED file to a Picard Interval List
@@ -31,7 +36,7 @@ create_interval_file() {
 	# - Another IntervalList with @SQ lines in the header from which to generate a dictionary
 	# - A VCF that contains #contig lines from which to generate a sequence dictionary
 	# - A SAM or BAM file with @SQ lines in the header from which to generate a dictionary
-	$java -jar /picard.jar BedToIntervalList \
+	$java -jar PICARD_JAR BedToIntervalList \
 	I="$bedfile_path" \
 	O=targets.picard \
 	SD="$sorted_bam_path"
@@ -43,7 +48,7 @@ collect_targeted_pcr_metrics() {
 	# as input. The file is referenced in this command with the option 'I=<input_file>'. Here, the
 	# downloaded BAM file path is accessed using the DNAnexus helper variable $sorted_bam_path.
 	# All outputs are saved to $output_dir (defined in main()) for upload to DNAnexus.
-	$java -jar /picard.jar CollectTargetedPcrMetrics  I="$sorted_bam_path" R=genome.fa \
+	$java -jar PICARD_JAR CollectTargetedPcrMetrics  I="$sorted_bam_path" R=genome.fa \
 	O="$output_dir/$sorted_bam_prefix.targetPCRmetrics.txt" AI=targets.picard TI=targets.picard \
 	PER_TARGET_COVERAGE="$output_dir/$sorted_bam_prefix.perTargetCov.txt"
 }
@@ -58,7 +63,7 @@ collect_multiple_metrics() {
 	# e.g. some aren't applicable for amplicon NGC
 	# Note that CollectSequencingArtifactMetrics errors out with TSO500 BAMs due to
 	# "Record contains library that is missing from header" and so not used (fix unclear)
-	$java -jar /picard.jar CollectMultipleMetrics I="$sorted_bam_path" R=genome.fa \
+	$java -jar PICARD_JAR CollectMultipleMetrics I="$sorted_bam_path" R=genome.fa \
 	PROGRAM=null \
 	PROGRAM=CollectAlignmentSummaryMetrics \
 	PROGRAM=CollectInsertSizeMetrics \
@@ -76,7 +81,7 @@ collect_hs_metrics() {
 	# Call Picard CollectHsMetrics. Requires the co-ordinate sorted BAM file given to the app as
 	# input (I=). Outputs the hsmetrics.tsv and pertarget_coverage.tsv files to $output_dir
 	# (defined in main()) for upload to DNAnexus. Note that coverage cap is set to 100000 (default=200).
-	$java -jar /picard.jar CollectHsMetrics BI=targets.picard TI=targets.picard I="$sorted_bam_path" \
+	$java -jar PICARD_JAR CollectHsMetrics BI=targets.picard TI=targets.picard I="$sorted_bam_path" \
 	O="$output_dir/${sorted_bam_prefix}.hsmetrics.tsv" R=genome.fa \
 	PER_TARGET_COVERAGE="$output_dir/${sorted_bam_prefix}.pertarget_coverage.tsv" \
 	COVERAGE_CAP=100000
@@ -87,33 +92,40 @@ collect_rnaseq_metrics() {
 	# Call Picard CollectRnaSeqMetrics. akes a SAM/BAM file containing
 	# the aligned reads from an RNAseq experiment and produces metrics
 	# describing the distribution of the bases within the transcripts
-	$java -jar /picard.jar CollectRnaSeqMetrics \
+	$java -jar PICARD_JAR CollectRnaSeqMetrics \
     I="$sorted_bam_path" \
     O="$output_dir/${sorted_bam_prefix}.RNAmetrics.tsv" \
     REF_FLAT="$ref_flat" \
     STRAND=SECOND_READ_TRANSCRIPTION_STRAND
 }
 
-main() {
-
 ##### SETUP #####
 
+echo "Running setup"
 # Download input files from inputSpec to ~/in/. Allows the use of DNA Nexus bash helper variables.
 dx-download-all-inputs
 
 # Calculate 90% of memory size for java
 mem_in_mb=$(head -n1 /proc/meminfo | awk '{print int($2*0.9/1024)}')
 # Set java command with the calculated maximum memory usage
+
 java="java -Xmx${mem_in_mb}m"
+
+export PICARD_JAR=${pathToBin}/picard.jar
+export GTF_TO_REFFLAT=${pathToBin}/GtftoRefflat-assembly-0.1.jar
 
 # Unpack the reference genome for Picard. Produces genome.fa, genome.fa.fai, and genome.dict files.
 tar zxvf $fasta_index_path
 
 # Create directory for Picard stats files to be uploaded from the worker
-output_dir=$HOME/out/eggd_picard_stats/QC
+
 mkdir -p $output_dir
 
+
+
 ##### MAIN #####
+
+echo "Running"
 
 # Create the interval file if required
 if [ "$run_CollectMultipleMetrics" == true ] || [ "$run_CollectHsMetrics" == true ] || [ "$run_CollectTargetedPcrMetrics" == true ]; then
@@ -146,7 +158,7 @@ if [ -z "$ref_annot_refflat" ]; then # when there's NO refflat
 	lib_dir=$(echo $fasta_index_name | cut -d "." -f 1,2)
 	ref_annot_gtf="/home/dnanexus/${lib_dir}/ctat_genome_lib_build_dir/ref_annot.gtf"
 	# conversion of gtf to ref flat file
-	$java -jar /GtftoRefflat-assembly-0.1.jar \
+	$java -jar GTF_TO_REFFLAT \
 	-g $ref_annot_gtf \
 	-r ${lib_dir}_ref_annot.refflat
 	ref_flat=${lib_dir}_ref_annot.refflat
@@ -166,4 +178,3 @@ fi
 
 # Upload all results files and directories in $HOME/out/eggd_picard_stats/
 dx-upload-all-outputs --parallel
-}
