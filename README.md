@@ -70,6 +70,26 @@ https://broadinstitute.github.io/picard/picard-metric-definitions.html
 
 ## How does this app work?
 This app downloads the given input files and uses BAM and BED files to create a picard intervals_list file. 
-Depending on the capture/amplicon flag either Picard TargetedPcrMetrics or both Picard CollectMultipleMetrics and Picard CalculateHsMetrics are then called. 
+Depending on the capture/amplicon flag either Picard TargetedPcrMetrics or both Picard CollectMultipleMetrics and Picard CalculateHsMetrics are then called.
 
 All output files are uploaded into the directory 'QC'.
+
+
+### To build eggd_picardqc_nextflow on DNAnexus
+
+```
+ git clone <repo>
+ dx select <DNAnexus project>
+ dx build --nextflow (inside the cloned folder)
+ ```
+### To run eggd_picardqc_nextflow on DNAnexus
+
+ ```
+ dx run applet-XXXXX \
+-inextflow_pipeline_params="--file_path=<dir/to/bam files>"
+```
+**example**
+
+```
+dx run applet-Ggy24Kj419KYY1bzKBBgyPGZ -inextflow_pipeline_params="--bam_path=dx://project-Gfx0zFj419KV0x7485fXb1yF:/test_input_data/"
+```
