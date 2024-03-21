@@ -58,8 +58,8 @@ collect_targeted_pcr_metrics() {
 	# downloaded BAM file path is accessed using the DNAnexus helper variable $sorted_bam_path.
 	# All outputs are saved to $output_dir (defined in main()) for upload to DNAnexus.
 	$java -jar ${pathToBin}/picard.jar CollectTargetedPcrMetrics  I="$sorted_bam_path" R=genome.fa \
-	O="$output_dir/$sorted_bam_prefix.targetPCRmetrics.txt" AI=targets.picard TI=targets.picard \
-	PER_TARGET_COVERAGE="$output_dir/$sorted_bam_prefix.perTargetCov.txt"
+	O="$sorted_bam_prefix.targetPCRmetrics.txt" AI=targets.picard TI=targets.picard \
+	PER_TARGET_COVERAGE="$sorted_bam_prefix.perTargetCov.txt"
 }
 
 collect_multiple_metrics() {
@@ -81,7 +81,7 @@ collect_multiple_metrics() {
 	PROGRAM=CollectBaseDistributionByCycle \
 	PROGRAM=CollectGcBiasMetrics \
 	PROGRAM=CollectQualityYieldMetrics \
-	O="$output_dir/$sorted_bam_prefix"
+	O="$sorted_bam_prefix"
 	# PROGRAM=CollectSequencingArtifactMetrics \
 }
 
@@ -91,8 +91,8 @@ collect_hs_metrics() {
 	# input (I=). Outputs the hsmetrics.tsv and pertarget_coverage.tsv files to $output_dir
 	# (defined in main()) for upload to DNAnexus. Note that coverage cap is set to 100000 (default=200).
 	$java -jar ${pathToBin}/picard.jar CollectHsMetrics BI=targets.picard TI=targets.picard I="$sorted_bam_path" \
-	O="$output_dir/${sorted_bam_prefix}.hsmetrics.tsv" R=genome.fa \
-	PER_TARGET_COVERAGE="$output_dir/${sorted_bam_prefix}.pertarget_coverage.tsv" \
+	O="${sorted_bam_prefix}.hsmetrics.tsv" R=genome.fa \
+	PER_TARGET_COVERAGE="${sorted_bam_prefix}.pertarget_coverage.tsv" \
 	COVERAGE_CAP=100000
 }
 
@@ -103,7 +103,7 @@ collect_rnaseq_metrics() {
 	# describing the distribution of the bases within the transcripts
 	$java -jar ${pathToBin}/picard.jar CollectRnaSeqMetrics \
     I="$sorted_bam_path" \
-    O="$output_dir/${sorted_bam_prefix}.RNAmetrics.tsv" \
+    O="${sorted_bam_prefix}.RNAmetrics.tsv" \
     REF_FLAT="$ref_flat" \
     STRAND=SECOND_READ_TRANSCRIPTION_STRAND
 }
@@ -179,7 +179,9 @@ if [[ "$run_CollectTargetedPcrMetrics" == false ]] && [[ "$run_CollectHsMetrics"
 echo "No picard functions selected!"
 fi
 
-ls $output_dir
+# ls $output_dir
+
+ls .
 
 ##### CLEAN UP #####
 

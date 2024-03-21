@@ -17,6 +17,8 @@ process PICARDQC {
     output:
 
     // TODO: add when statements to have outputs for the differernt run types
+
+    // change so only *.[name]
       path "*.alignment_summary_metrics", optional: true
       path "*.insert_size_metrics", optional: true
       path "*.insert_size_histogram.pdf", optional: true
